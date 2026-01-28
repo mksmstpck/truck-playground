@@ -1,0 +1,10 @@
+[package]
+name = "truck-playground"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+truck-modeling = "0.6.0"
+truck-meshalgo = "0.4.0"
+truck-stepio = "0.3.0"
+truck-geometry = "0.5.0"
