@@ -734,7 +734,7 @@ dependencies = [
  "nom 7.1.3",
  "ruststep-derive",
  "serde",
- "thiserror",
+ "thiserror 1.0.69",
 ]
 
 [[package]]
@@ -857,7 +857,16 @@ version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6aaf5339b578ea85b50e080feb250a3e8ae8cfcdff9a461c9ec2904bc923f52"
 dependencies = [
- "thiserror-impl",
+ "thiserror-impl 1.0.69",
+]
+
+[[package]]
+name = "thiserror"
+version = "2.0.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4288b5bcbc7920c07a1149a35cf9590a2aa808e0bc1eafaade0b80947865fbc4"
+dependencies = [
+ "thiserror-impl 2.0.18",
 ]
 
 [[package]]
@@ -865,6 +874,17 @@ name = "thiserror-impl"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4fee6c4efc90059e10f81e6d42c60a18f76588c3d74cb83a0b242a2b6c7504c1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.114",
+]
+
+[[package]]
+name = "thiserror-impl"
+version = "2.0.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ebc4ee7f67670e9b64d05fa4253e753e016c6c95ff35b89b7941d6b856dec1d5"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -919,7 +939,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d9d85f203fdbc2d206a38b8e7c4417a05a2eb589be8b81ecfe9f98faafc425d"
 dependencies = [
  "serde",
- "thiserror",
+ "thiserror 1.0.69",
  "truck-base",
  "truck-geotrait",
 ]
@@ -932,7 +952,7 @@ checksum = "97a31fe98d5a0589ad20576260e214af23dea21a8d125da81ad3bbcb666f411f"
 dependencies = [
  "getrandom",
  "rand",
- "thiserror",
+ "thiserror 1.0.69",
  "truck-base",
  "truck-derivers",
 ]
@@ -965,7 +985,7 @@ dependencies = [
  "derive_more",
  "rustc-hash",
  "serde",
- "thiserror",
+ "thiserror 1.0.69",
  "truck-base",
  "truck-geometry",
  "truck-geotrait",
@@ -977,6 +997,7 @@ dependencies = [
 name = "truck-playground"
 version = "0.1.0"
 dependencies = [
+ "thiserror 2.0.18",
  "truck-geometry",
  "truck-meshalgo",
  "truck-modeling",
@@ -994,7 +1015,7 @@ dependencies = [
  "itertools 0.13.0",
  "rustc-hash",
  "serde",
- "thiserror",
+ "thiserror 1.0.69",
  "truck-base",
  "truck-geotrait",
 ]
@@ -1028,7 +1049,7 @@ dependencies = [
  "rclite",
  "rustc-hash",
  "serde",
- "thiserror",
+ "thiserror 1.0.69",
  "truck-base",
  "truck-geotrait",
 ]

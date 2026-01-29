@@ -1,92 +1,117 @@
-use crate::sketch::primitives::{Curve2D, Loop2D, SketchCurve2D};
-use truck_geometry::prelude::*;
+pub mod builder;
+pub mod constants;
+pub mod error;
+pub mod loop2d;
+pub mod plane;
+pub mod primitives;
+pub mod shapes;
+pub mod topology;
 
+pub use builder::SketchBuilder;
+pub use error::{SketchError, SketchResult};
+pub use loop2d::Loop2D;
+pub use plane::Plane;
+pub use primitives::{Arc2D, BSpline2D, Circle2D, Curve2D, Line2D, SketchCurve2D};
+pub use shapes::Shapes;
+
+use truck_geometry::prelude::*;
+use truck_modeling::{builder as truck_builder, Face, Solid, Surface, Wire};
+
+/// A complete sketch with outer boundary and optional holes
 pub struct Sketch {
     pub outer: Loop2D,
     pub holes: Vec<Loop2D>,
 }
 
-pub struct Plane {
-    pub origin: Point3,
-    pub x_dir: Vector3,
-    pub y_dir: Vector3,
-}
-
-impl Plane {
-    pub fn to_truck_plane(&self) -> truck_geometry::specifieds::Plane {
-        // Calculate normal (must not be zero; x_dir and y_dir must be non-collinear)
-        let normal = self.x_dir.cross(self.y_dir).normalize();
-
-        //FIX: add propper error handling
-        if normal == Vector3::new(0.0, 0.0, 0.0) {
-            print!("error here, normal is zero")
-        }
-
-        // Choose three points on the plane:
-        // - origin
-        // - origin + x_dir
-        // - origin + y_dir
-        let p0 = self.origin;
-        let p1 = self.origin + self.x_dir;
-        let p2 = self.origin + self.y_dir;
-
-        // Construct Truck's Plane from three points.
-        truck_geometry::specifieds::Plane::new(p0, p1, p2)
-    }
-
-    pub fn lift_point(&self, p: Point2) -> Point3 {
-        self.origin + self.x_dir * p.x + self.y_dir * p.y
-    }
-}
-
-pub struct CircleArc3 {
-    pub center: Point3,
-    pub normal: Vector3,
-    pub start: Point3,
-    pub end: Point3,
-}
-
-pub enum Curve3D {
-    Line(Line<Point3>),
-    Arc(CircleArc3),
-    BSpline(BSplineCurve<Point3>),
-}
-
-impl Curve2D {
-    pub fn to_curve3d(&self, plane: &Plane) -> Curve3D {
-        match self {
-            Curve2D::Line(line) => {
-                let p0 = plane.lift_point(line.start);
-                let p1 = plane.lift_point(line.end);
-                Curve3D::Line(Line::from_origin_direction(p0, p1 - p0))
-            }
-            Curve2D::Arc(arc) => {
-                let start3d = plane.lift_point(arc.start());
-                let end3d = plane.lift_point(arc.end());
-                let center3d = plane.lift_point(arc.center);
-                let normal = plane.x_dir.cross(plane.y_dir);
-                Curve3D::Arc(CircleArc3 {
-                    center: center3d,
-                    normal,
-                    start: start3d,
-                    end: end3d,
-                })
-            }
-            Curve2D::BSpline(bspline) => {
-                let lifted_pts: Vec<Point3> = bspline
-                    .curve
-                    .control_points()
-                    .iter()
-                    .map(|&p| plane.lift_point(p))
-                    .collect();
-                let degree = bspline.curve.degree();
-                let n = lifted_pts.len();
-                let knots = KnotVec::uniform_knot(n, degree);
-                let lifted_bspline = BSplineCurve::new(knots, lifted_pts);
-                Curve3D::BSpline(lifted_bspline)
-            }
+impl Sketch {
+    /// Create sketch with just outer boundary
+    pub fn new(outer: Loop2D) -> Self {
+        Self {
+            outer,
+            holes: Vec::new(),
         }
     }
+
+    /// Create sketch with holes
+    pub fn with_holes(outer: Loop2D, holes: Vec<Loop2D>) -> Self {
+        Self { outer, holes }
+    }
+
+    /// Add a hole
+    #[allow(dead_code)]
+    pub fn add_hole(&mut self, hole: Loop2D) {
+        self.holes.push(hole);
+    }
+
+    /// Convert to truck Wire (outer boundary only)
+    #[allow(dead_code)]
+    pub fn to_truck_wire(&self, plane: &Plane) -> SketchResult<Wire> {
+        self.outer.to_truck_wire(plane)
+    }
+
+    /// Convert to truck Face
+    pub fn to_truck_face(&self, plane: &Plane) -> SketchResult<Face> {
+        let truck_plane = plane.to_truck_plane()?;
+        let outer_wire = self.outer.to_truck_wire(plane)?;
+
+        // Create face from outer wire
+        let mut face = Face::try_new(vec![outer_wire], Surface::Plane(truck_plane))
+            .map_err(|e| SketchError::TruckFaceError(format!("{:?}", e)))?;
+
+        // Add holes
+        for hole in &self.holes {
+            let hole_wire = hole.to_truck_wire(plane)?;
+            face.add_boundary(hole_wire);
+        }
+
+        Ok(face)
+    }
+
+    /// Extrude sketch into a solid
+    pub fn extrude(&self, plane: &Plane, direction: Vector3) -> SketchResult<Solid> {
+        let face = self.to_truck_face(plane)?;
+        Ok(truck_builder::tsweep(&face, direction))
+    }
+
+    /// Revolve sketch into a solid
+    #[allow(dead_code)]
+    pub fn revolve(
+        &self,
+        plane: &Plane,
+        axis_origin: Point3,
+        axis_direction: Vector3,
+        angle: Rad<f64>,
+    ) -> SketchResult<Solid> {
+        let face = self.to_truck_face(plane)?;
+        Ok(truck_builder::rsweep(
+            &face,
+            axis_origin,
+            axis_direction,
+            angle,
+        ))
+    }
 }
 
-pub mod primitives;
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_simple_extrusion() {
+        let rect = Shapes::rectangle(Point2::origin(), 10.0, 5.0).unwrap();
+        let sketch = Sketch::new(rect);
+        let plane = Plane::xy();
+        let solid = sketch.extrude(&plane, Vector3::new(0.0, 0.0, 2.0));
+        assert!(solid.is_ok());
+    }
+
+    #[test]
+    fn test_circle_with_hole() {
+        let outer = Shapes::circle(Point2::origin(), 50.0).unwrap();
+        let hole = Shapes::circle(Point2::origin(), 20.0).unwrap();
+        let sketch = Sketch::with_holes(outer, vec![hole]);
+        let plane = Plane::xy();
+        let solid = sketch.extrude(&plane, Vector3::unit_z() * 10.0);
+        assert!(solid.is_ok());
+    }
+}
