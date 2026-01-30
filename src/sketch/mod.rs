@@ -83,12 +83,7 @@ impl Sketch {
         angle: Rad<f64>,
     ) -> SketchResult<Solid> {
         let face = self.to_truck_face(plane)?;
-        Ok(truck_builder::rsweep(
-            &face,
-            axis_origin,
-            axis_direction,
-            angle,
-        ))
+        Ok(truck_builder::rsweep(&face, axis_origin, axis_direction, angle))
     }
 }
 

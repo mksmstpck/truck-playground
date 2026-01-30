@@ -101,32 +101,32 @@ fn circle_to_wire(circle: &Circle2D, plane: &Plane) -> SketchResult<Wire> {
     let center3d = plane.lift_point(circle.center());
     let start3d = plane.lift_point(circle.start());
     let normal = plane.normal();
-
+    
     // Calculate opposite point on circle
     let radius = circle.radius();
     let x_axis = (start3d - center3d).normalize();
     let opposite3d = center3d - x_axis * radius;
-
+    
     // Create two shared vertices
     let v0 = builder::vertex(start3d);
     let v1 = builder::vertex(opposite3d);
-
+    
     let half_sweep = if circle.is_ccw() {
         std::f64::consts::PI
     } else {
         -std::f64::consts::PI
     };
-
+    
     // First semicircle: start -> opposite
     let nurbs1 = arc_to_nurbs(center3d, normal, start3d, half_sweep)?;
     let edge1 = Edge::try_new(&v0, &v1, Curve::NurbsCurve(nurbs1))
         .map_err(|e| SketchError::TruckEdgeError(format!("{:?}", e)))?;
-
+    
     // Second semicircle: opposite -> start
     let nurbs2 = arc_to_nurbs(center3d, normal, opposite3d, half_sweep)?;
     let edge2 = Edge::try_new(&v1, &v0, Curve::NurbsCurve(nurbs2))
         .map_err(|e| SketchError::TruckEdgeError(format!("{:?}", e)))?;
-
+    
     let wire: Wire = vec![edge1, edge2].into_iter().collect();
     Ok(wire)
 }
